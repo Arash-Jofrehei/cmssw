@@ -72,7 +72,10 @@ Phase2TrackerDigitizerAlgorithm::Phase2TrackerDigitizerAlgorithm(const edm::Para
   GeVperElectron(3.61E-09), // 1 electron(3.61eV, 1keV(277e, mod 9/06 d.k.
   alpha2Order(conf_specific.getParameter<bool>("Alpha2Order")),      // switch on/off of E.B effect
   addXtalk(conf_specific.getParameter<bool>("AddXTalk")), 
-  interstripCoupling(conf_specific.getParameter<double>("InterstripCoupling")), // Interstrip Coupling
+  interstripCouplingVerOdd(conf_specific.getParameter<double>("InterstripCouplingVerOdd")), // vertical interstrip coupling for odd rows
+  interstripCouplingVerEven(conf_specific.getParameter<double>("InterstripCouplingVerEven")), // vertical interstrip coupling for even rows
+  interstripCouplingHorOdd(conf_specific.getParameter<double>("InterstripCouplingHorOdd")), // Horizontal Interstrip Coupling for odd rows
+  interstripCouplingHorEven(conf_specific.getParameter<double>("InterstripCouplingHorEven")), // Horizontal Interstrip Coupling for even rows
   
   Sigma0(conf_specific.getParameter<double>("SigmaZero")),           // Charge diffusion constant 7->3.7
   SigmaCoeff(conf_specific.getParameter<double>("SigmaCoeff")),      // delta in the diffusion across the strip pitch 
@@ -609,6 +612,7 @@ void Phase2TrackerDigitizerAlgorithm::add_cross_talk(const Phase2TrackerGeomDetU
   signal_map_type signalNew;
   const Phase2TrackerTopology* topol = &pixdet->specificTopology();
   int numRows = topol->nrows();
+  int numColumns = topol->ncolumns();
 
   for (auto & s : theSignal) {
     float signalInElectrons = s.second.ampl();   // signal in electrons
@@ -616,21 +620,42 @@ void Phase2TrackerDigitizerAlgorithm::add_cross_talk(const Phase2TrackerGeomDetU
     if (pixelFlag) hitChan = PixelDigi::channelToPixel(s.first);
     else hitChan = Phase2TrackerDigi::channelToPixel(s.first);
     
-    float signalInElectrons_Xtalk = signalInElectrons * interstripCoupling;     
+    float signalInElectrons_XtalkVerOdd = signalInElectrons * interstripCouplingVerOdd; 
+    float signalInElectrons_XtalkVerEven = signalInElectrons * interstripCouplingVerEven;    
+    float signalInElectrons_XtalkHorOdd = signalInElectrons * interstripCouplingHorOdd;   
+    float signalInElectrons_XtalkHorEven = signalInElectrons * interstripCouplingHorEven;
+    
     //subtract the charge which will be shared 
-    s.second.set(signalInElectrons-signalInElectrons_Xtalk);
+    s.second.set(signalInElectrons-signalInElectrons_XtalkVerOdd-signalInElectrons_XtalkVerEven-signalInElectrons_XtalkHorOdd-signalInElectrons_XtalkHorEven);
          
     if (hitChan.first != 0) {	
       std::pair<int,int> XtalkPrev = std::pair<int,int>(hitChan.first-1, hitChan.second);
       int chanXtalkPrev = (pixelFlag) ? PixelDigi::pixelToChannel(XtalkPrev.first, XtalkPrev.second)
 	: Phase2TrackerDigi::pixelToChannel(XtalkPrev.first, XtalkPrev.second);
-      signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkPrev, DigitizerUtility::Amplitude(signalInElectrons_Xtalk, nullptr, -1.0)));
+      if (hitChan.first % 2 == 1) signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkPrev, DigitizerUtility::Amplitude(signalInElectrons_XtalkVerEven, nullptr, -1.0)));
+      else signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkPrev, DigitizerUtility::Amplitude(signalInElectrons_XtalkVerOdd, nullptr, -1.0)));
     }
     if (hitChan.first < (numRows-1)) {
       std::pair<int,int> XtalkNext = std::pair<int,int>(hitChan.first+1, hitChan.second);
       int chanXtalkNext = (pixelFlag) ? PixelDigi::pixelToChannel(XtalkNext.first, XtalkNext.second)
 	: Phase2TrackerDigi::pixelToChannel(XtalkNext.first, XtalkNext.second);
-      signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkNext, DigitizerUtility::Amplitude(signalInElectrons_Xtalk, nullptr, -1.0)));
+      if (hitChan.first % 2 == 1) signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkNext, DigitizerUtility::Amplitude(signalInElectrons_XtalkVerOdd, nullptr, -1.0)));
+      else signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkNext, DigitizerUtility::Amplitude(signalInElectrons_XtalkVerEven, nullptr, -1.0)));
+    }
+      
+    if (hitChan.second != 0) {	
+      std::pair<int,int> XtalkPrev = std::pair<int,int>(hitChan.first, hitChan.second-1);
+      int chanXtalkPrev = (pixelFlag) ? PixelDigi::pixelToChannel(XtalkPrev.first, XtalkPrev.second)
+	: Phase2TrackerDigi::pixelToChannel(XtalkPrev.first, XtalkPrev.second);
+      if (hitChan.second % 2 == 1) signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkPrev, DigitizerUtility::Amplitude(signalInElectrons_XtalkHorEven, nullptr, -1.0)));
+      else signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkPrev, DigitizerUtility::Amplitude(signalInElectrons_XtalkHorOdd, nullptr, -1.0)));
+    }
+    if (hitChan.second < (numColumns-1)) {
+      std::pair<int,int> XtalkNext = std::pair<int,int>(hitChan.first, hitChan.second+1);
+      int chanXtalkNext = (pixelFlag) ? PixelDigi::pixelToChannel(XtalkNext.first, XtalkNext.second)
+	: Phase2TrackerDigi::pixelToChannel(XtalkNext.first, XtalkNext.second);
+      if (hitChan.second % 2 == 1) signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkNext, DigitizerUtility::Amplitude(signalInElectrons_XtalkHorOdd, nullptr, -1.0)));
+      else signalNew.insert(std::pair<int,DigitizerUtility::Amplitude>(chanXtalkNext, DigitizerUtility::Amplitude(signalInElectrons_XtalkHorEven, nullptr, -1.0)));
     }
   }
   for (auto const & l : signalNew) {

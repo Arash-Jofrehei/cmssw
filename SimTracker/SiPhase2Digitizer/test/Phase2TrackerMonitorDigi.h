@@ -32,6 +32,7 @@ public:
     MonitorElement* NumberOfDigisPerDet;
     MonitorElement* DigiOccupancyP;
     MonitorElement* DigiOccupancyS;
+    MonitorElement* ChargeXYMap;
     MonitorElement* PositionOfDigis;
     MonitorElement* ChargeOfDigis;
     MonitorElement* TotalNumberOfDigisPerLayer;
