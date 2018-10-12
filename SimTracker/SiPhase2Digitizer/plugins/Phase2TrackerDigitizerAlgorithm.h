@@ -108,7 +108,10 @@ class Phase2TrackerDigitizerAlgorithm  {
   //-- drift
   const bool alpha2Order;          // Switch on/off of E.B effect 
   const bool addXtalk;
-  const float interstripCoupling;     
+  const float interstripCouplingVerOdd;
+  const float interstripCouplingVerEven;
+  const float interstripCouplingHorOdd;
+  const float interstripCouplingHorEven;  
   const float Sigma0; //=0.0007  // Charge diffusion in microns for 300 micron Si
   const float SigmaCoeff; // delta in the diffusion across the strip pitch 
   

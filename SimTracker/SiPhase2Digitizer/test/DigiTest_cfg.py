@@ -27,7 +27,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
 
 process.source = cms.Source("PoolSource",
     fileNames =  cms.untracked.vstring(
-        'file:step2_DIGI.root'
+        'file:/mnt/t3nfs01/data01/shome/ajofrehe/CMSSW_10_2_1/src/step2.root'
       )
 )
 # Production Info
